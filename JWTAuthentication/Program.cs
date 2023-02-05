@@ -1,17 +1,31 @@
-var builder = WebApplication.CreateBuilder(args);
+using JWTAuthentication.Databases;
+using JWTAuthentication.Databases.Employees;
+using JWTAuthentication.Databases.Users;
+using JWTAuthentication.Options;
 
-// Add services to the container.
+internal class Program
+{
+    private static void Main(string[] args)
+    {
+        var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddControllers();
+        // Add services to the container.
 
-var app = builder.Build();
+        builder.Services.AddControllers();
+        builder.Services.Configure<LiteDBOptions>(builder.Configuration.GetSection(LiteDBOptions.LiteDB));
+        builder.Services.AddSingleton<ILiteDbContext, DatabaseContext>();
+        builder.Services.AddTransient<IEmployeeService, EmployeeService>();
+        builder.Services.AddTransient<IUserService, UserService>();
+        var app = builder.Build();
 
-// Configure the HTTP request pipeline.
+        // Configure the HTTP request pipeline.
 
-app.UseHttpsRedirection();
+        app.UseHttpsRedirection();
 
-app.UseAuthorization();
+        app.UseAuthorization();
 
-app.MapControllers();
+        app.MapControllers();
 
-app.Run();
+        app.Run();
+    }
+}
