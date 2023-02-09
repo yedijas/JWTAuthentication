@@ -26,7 +26,7 @@ namespace JWTAuthentication.Controllers
             return _userService.GetAll();
         }
 
-        [HttpGet("{id}", Name = "FindOne")]
+        [HttpGet("{id}")]
         public ActionResult<User> Get(int id)
         {
             var result = _userService.GetById(id);
@@ -36,12 +36,23 @@ namespace JWTAuthentication.Controllers
                 return NotFound();
         }
 
+        [HttpGet("{userEmail}")]
+        public ActionResult<User> Get(string userEmail)
+        {
+            var result = _userService.GetByEmail(userEmail);
+            if (result != default)
+                return Ok(_userService.GetByEmail(userEmail));
+            else
+                return NotFound();
+        }
+
         [HttpPost]
         public ActionResult<User> Insert([FromBody] User newUser)
         {
+            newUser.CreatedAt = DateTime.Now;
             var id = _userService.Insert(newUser);
             if (id != default)
-                return CreatedAtAction("FindOne", _userService.GetById(id));
+                return CreatedAtAction("Get", _userService.GetById(id));
             else
                 return BadRequest();
         }
@@ -75,5 +86,16 @@ namespace JWTAuthentication.Controllers
             else
                 return NotFound();
         }
+
+        [HttpPost("{userName,password}")]
+        public ActionResult Login(string userName, string password)
+        {
+            var singleUser = _userService.GetByUsername(userName);
+            if (singleUser != null && singleUser.UserPassword.Equals(password)) 
+                return Ok(); // should return token here
+            else
+                return BadRequest();
+        }
+
     }
 }

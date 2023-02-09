@@ -4,6 +4,7 @@
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
 # My generated files
+[Ll]iteDb/
 testDB.db
 testDB-log.db
 

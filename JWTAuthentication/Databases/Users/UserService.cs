@@ -36,9 +36,17 @@ namespace JWTAuthentication.Databases.Users
         public User GetByEmail(string userEmail)
         {
             var result = _myLiteDB.GetCollection<User>
-                ("User").Find(o => 
-                !o.UserEmail.IsNullOrEmpty()
-                && o.UserEmail.Equals(userEmail))
+                ("User").Find(o =>
+                o.UserEmail.Equals(userEmail))
+                .FirstOrDefault();
+            return result;
+        }
+
+        public User GetByUsername(string userName)
+        {
+            var result = _myLiteDB.GetCollection<User>
+                ("User").Find(o =>
+                o.UserName.Equals(userName))
                 .FirstOrDefault();
             return result;
         }

@@ -11,6 +11,7 @@ namespace JWTAuthentication.Databases.Users
         public IEnumerable<User> GetAll();
         public User GetById(int userID);
         public User GetByEmail(string userEmail);
+        public User GetByUsername(string userName);
         public User GetOne(User user);
     }
 }
