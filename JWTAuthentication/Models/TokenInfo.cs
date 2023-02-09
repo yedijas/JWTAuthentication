@@ -14,12 +14,15 @@ namespace JWTAuthentication.Models
 
         public string Audience { get; set; }
 
-        public TokenInfo(string _issuer, string _subject, string _audience, string _plainKey = "")
+        public int TokenLife { get; set; }
+
+        public TokenInfo(string _issuer, string _subject, string _audience, int _tokenLife, string _plainKey = "")
         {
             Subject = _subject;
             Issuer = _issuer;
             UnHashedSecretKey = _plainKey;
             Audience = _audience;
+            TokenLife = _tokenLife;
             HashTheKey();
         }
 

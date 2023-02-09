@@ -24,12 +24,15 @@ namespace JWTAuthentication.Controllers
         private readonly ILogger<UserController> _logger;
         private readonly IOptions<JWTOptions> _options;
         private readonly IUserService _userService;
+        private readonly ITokenHelper _tokenHelper;
 
-        public UserController(ILogger<UserController> logger, IOptions<JWTOptions> options, IUserService userService)
+        public UserController(ILogger<UserController> logger, IOptions<JWTOptions> options, IUserService userService
+            ,ITokenHelper tokenHelper)
         {
             _logger = logger;
             _options = options;
             _userService = userService;
+            _tokenHelper = tokenHelper;
         }
 
         [HttpGet]
@@ -43,7 +46,7 @@ namespace JWTAuthentication.Controllers
         {
             var result = _userService.GetById(id);
             if (result != default)
-                return Ok(_userService.GetById(id));
+                return Ok(result);
             else
                 return NotFound();
         }
@@ -53,7 +56,7 @@ namespace JWTAuthentication.Controllers
         {
             var result = _userService.GetByEmail(userEmail);
             if (result != default)
-                return Ok(_userService.GetByEmail(userEmail));
+                return Ok(result);
             else
                 return NotFound();
         }
@@ -70,21 +73,21 @@ namespace JWTAuthentication.Controllers
         }
 
         [HttpPut]
-        public ActionResult<User> Update(User newUser)
+        public ActionResult Update(User newUser)
         {
             var result = _userService.Update(newUser);
             if (result)
-                return NoContent();
+                return Ok();
             else
                 return NotFound();
         }
 
         [HttpDelete("{id}")]
-        public ActionResult<User> Delete(int userId)
+        public ActionResult Delete(int userId)
         {
             var result = _userService.Delete(userId);
             if (result)
-                return NoContent();
+                return Ok();
             else
                 return NotFound();
         }
@@ -94,7 +97,7 @@ namespace JWTAuthentication.Controllers
         {
             var result = _userService.DeleteByEmail(userEmail);
             if (result > 0)
-                return NoContent();
+                return Ok();
             else
                 return NotFound();
         }
@@ -104,11 +107,12 @@ namespace JWTAuthentication.Controllers
         public ActionResult Login(string userName, string password)
         {
             var singleUser = _userService.GetByUsername(userName);
-            Request.Headers.TryGetValue("Host", out StringValues requesterHostName);
-            var tokenInfo = new TokenInfo(_options.Value.Issuer, _options.Value.Subject, requesterHostName, _options.Value.SecretKey);
+            StringValues requesterHostName = "";
+            Request.Headers.TryGetValue("Host", out requesterHostName);
+            var tokenInfo = new TokenInfo(_options.Value.Issuer, _options.Value.Subject, requesterHostName, _options.Value.TokenLife, _options.Value.SecretKey);
             if (singleUser != null && singleUser.UserPassword.Equals(password))
             {
-                return Ok(TokenHelper.GenerateJSONWebToken(tokenInfo,singleUser)); // return token here
+                return Ok(_tokenHelper.GenerateJSONWebToken(tokenInfo,singleUser)); // return token here
             }
             else
                 return BadRequest();

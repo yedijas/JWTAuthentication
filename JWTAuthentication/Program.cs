@@ -1,4 +1,5 @@
 using JWTAuthentication.Databases;
+using JWTAuthentication.Databases.Audiences;
 using JWTAuthentication.Databases.Employees;
 using JWTAuthentication.Databases.Users;
 using JWTAuthentication.Helper;
@@ -6,6 +7,7 @@ using JWTAuthentication.Models;
 using JWTAuthentication.Options;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 
@@ -23,6 +25,8 @@ internal class Program
         builder.Services.AddSingleton<ILiteDbContext, DatabaseContext>();
         builder.Services.AddTransient<IEmployeeService, EmployeeService>();
         builder.Services.AddTransient<IUserService, UserService>();
+        builder.Services.AddTransient<IAudienceService, AudienceService>();
+        builder.Services.AddTransient<ITokenHelper, TokenHelper>();
 
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
         {
@@ -32,11 +36,10 @@ internal class Program
             options.TokenValidationParameters = new TokenValidationParameters()
             {
                 ValidateIssuer = true,
-                ValidateAudience = true, //this will be changed to valid hosts in DB
+                ValidateAudience = true, 
                 ValidIssuer = builder.Configuration["Jwt:Issuer"],
-                ValidAudience= builder.Configuration["Jwt:Audience"],
                 IssuerSigningKey = signinigkey,
-                AudienceValidator = TokenHelper.ValidateAudience
+                AudienceValidator = ValidateAudience
             };
         });
 
@@ -52,5 +55,36 @@ internal class Program
         app.MapControllers();
 
         app.Run();
+    }
+
+    /// <summary>
+    /// Validates the audience against the list in database.
+    /// This part was supposed to be in the helper class as static method. But often times the database has not initialized, and the services is not 
+    /// built yet. So here I am lazily make things work. Please let me know if there is any better way to access the database on this level of startup.
+    /// </summary>
+    /// <param name="audiences">audiences from the header</param>
+    /// <param name="securityToken">security token</param>
+    /// <param name="validationParameters">validation parameters</param>
+    /// <returns>whether the audience is valid or not</returns>
+    private static bool ValidateAudience(IEnumerable<string> audiences, SecurityToken securityToken,
+            TokenValidationParameters validationParameters)
+    {
+        bool retval = false;
+        var config = new ConfigurationBuilder()
+                .SetBasePath(Directory.GetCurrentDirectory())
+                .AddJsonFile("appsettings.json").Build();
+        string dbloc = config.GetValue<string>("LiteDB:DatabaseLocation");
+        using (var dbc = new DatabaseContext(dbloc)) // part where I init the database context.
+        {
+            var audienceService = new AudienceService(dbc);
+            foreach (string singleAudience in audiences)
+            {
+                retval = audienceService.CheckHostExists(singleAudience);
+                if (retval)
+                    break;
+            }
+        }
+
+        return retval;
     }
 }

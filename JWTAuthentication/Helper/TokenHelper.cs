@@ -1,4 +1,5 @@
-﻿using JWTAuthentication.Models;
+﻿using JWTAuthentication.Databases.Audiences;
+using JWTAuthentication.Models;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -6,9 +7,16 @@ using System.Text;
 
 namespace JWTAuthentication.Helper
 {
-    public class TokenHelper
+    public class TokenHelper : ITokenHelper
     {
-        public static string GenerateJSONWebToken(TokenInfo tokenInfo, User singleUser)
+        private IAudienceService _audienceService;
+        
+        public TokenHelper(IAudienceService audienceService)
+        {
+            _audienceService = audienceService;
+        }
+
+        public string GenerateJSONWebToken(TokenInfo tokenInfo, User singleUser)
         {
             var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(tokenInfo.HashedSecretKey));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
@@ -24,16 +32,24 @@ namespace JWTAuthentication.Helper
                 issuer: tokenInfo.Issuer,
                 audience: tokenInfo.Audience,
                 claims: claims,
-                expires: DateTime.Now.AddMinutes(120),
+                expires: DateTime.Now.AddMinutes(tokenInfo.TokenLife),
                 signingCredentials: credentials);
 
             return new JwtSecurityTokenHandler().WriteToken(token); ;
         }
 
-        internal static bool ValidateAudience(IEnumerable<string> audiences, SecurityToken securityToken, 
+        public bool ValidateAudience(IEnumerable<string> audiences, SecurityToken securityToken, 
             TokenValidationParameters validationParameters)
         {
-            return true;
+            bool retval = false;
+            foreach(string singleAudience in audiences)
+            {
+                retval = _audienceService.CheckHostExists(singleAudience);
+                if (retval)
+                    break;
+            }
+
+            return retval;
         }
     }
 }

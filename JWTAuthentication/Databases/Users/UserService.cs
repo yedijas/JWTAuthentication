@@ -22,8 +22,7 @@ namespace JWTAuthentication.Databases.Users
         public int DeleteByEmail(string userEmail)
         {
             return _myLiteDB.GetCollection<User>("User")
-                .DeleteMany(o => o.UserEmail.IsNullOrEmpty()
-                && o.UserEmail.Equals(userEmail));
+                .DeleteMany(o => o.UserEmail.Equals(userEmail));
         }
 
         public IEnumerable<User> GetAll()
