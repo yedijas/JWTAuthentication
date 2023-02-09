@@ -3,6 +3,10 @@
 ##
 ## Get latest from https://github.com/github/gitignore/blob/master/VisualStudio.gitignore
 
+# My generated files
+testDB.db
+testDB-log.db
+
 # User-specific files
 *.rsuser
 *.suo
@@ -361,3 +365,4 @@ MigrationBackup/
 
 # Fody - auto-generated XML schema
 FodyWeavers.xsd
+/JWTAuthentication/LiteDb/testDB.db
