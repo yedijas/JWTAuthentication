@@ -39,8 +39,7 @@ namespace JWTAuthentication.Databases.Employees
         {
             var result = _myLiteDB.GetCollection<Employee>
                 ("Employee").Find(o => 
-                !o.LoginID.IsNullOrEmpty() 
-                && o.LoginID.Equals(loginID))
+                o.LoginID.Equals(loginID))
                 .FirstOrDefault();
             return result;
         }

@@ -1,7 +1,14 @@
 ﻿using JWTAuthentication.Databases.Users;
+using JWTAuthentication.Helper;
 using JWTAuthentication.Models;
+using JWTAuthentication.Options;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Options;
+using Microsoft.IdentityModel.Tokens;
 using System.Collections.Generic;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
 
 // For more information on enabling Web API for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 
@@ -12,11 +19,13 @@ namespace JWTAuthentication.Controllers
     public class UserController : ControllerBase
     {
         private readonly ILogger<UserController> _logger;
+        private readonly IOptions<JWTOptions> _options;
         private readonly IUserService _userService;
 
-        public UserController(ILogger<UserController> logger, IUserService userService)
+        public UserController(ILogger<UserController> logger, IOptions<JWTOptions> options, IUserService userService)
         {
             _logger = logger;
+            _options = options;
             _userService = userService;
         }
 
@@ -91,11 +100,14 @@ namespace JWTAuthentication.Controllers
         public ActionResult Login(string userName, string password)
         {
             var singleUser = _userService.GetByUsername(userName);
-            if (singleUser != null && singleUser.UserPassword.Equals(password)) 
-                return Ok(); // should return token here
+            var tokenInfo = new TokenInfo(_options.Value.Issuer, _options.Value.Subject, _options.Value.SecretKey);
+            if (singleUser != null && singleUser.UserPassword.Equals(password))
+            {
+                return Ok(TokenHelper.GenerateJSONWebToken(tokenInfo,singleUser)); // return token here
+            }
             else
                 return BadRequest();
-        }
 
+        }
     }
 }

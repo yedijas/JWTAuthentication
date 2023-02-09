@@ -13,6 +13,7 @@ internal class Program
 
         builder.Services.AddControllers();
         builder.Services.Configure<LiteDBOptions>(builder.Configuration.GetSection(LiteDBOptions.LiteDB));
+        builder.Services.Configure<JWTOptions>(builder.Configuration.GetSection(JWTOptions.JWT));
         builder.Services.AddSingleton<ILiteDbContext, DatabaseContext>();
         builder.Services.AddTransient<IEmployeeService, EmployeeService>();
         builder.Services.AddTransient<IUserService, UserService>();
