@@ -2,8 +2,10 @@
 using JWTAuthentication.Helper;
 using JWTAuthentication.Models;
 using JWTAuthentication.Options;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
+using Microsoft.Extensions.Primitives;
 using Microsoft.IdentityModel.Tokens;
 using System.Collections.Generic;
 using System.IdentityModel.Tokens.Jwt;
@@ -14,6 +16,7 @@ using System.Text;
 
 namespace JWTAuthentication.Controllers
 {
+    [Authorize]
     [Route("api/[controller]")]
     [ApiController]
     public class UserController : ControllerBase
@@ -96,11 +99,13 @@ namespace JWTAuthentication.Controllers
                 return NotFound();
         }
 
+        [AllowAnonymous]
         [HttpPost("{userName,password}")]
         public ActionResult Login(string userName, string password)
         {
             var singleUser = _userService.GetByUsername(userName);
-            var tokenInfo = new TokenInfo(_options.Value.Issuer, _options.Value.Subject, _options.Value.SecretKey);
+            Request.Headers.TryGetValue("Host", out StringValues requesterHostName);
+            var tokenInfo = new TokenInfo(_options.Value.Issuer, _options.Value.Subject, requesterHostName, _options.Value.SecretKey);
             if (singleUser != null && singleUser.UserPassword.Equals(password))
             {
                 return Ok(TokenHelper.GenerateJSONWebToken(tokenInfo,singleUser)); // return token here

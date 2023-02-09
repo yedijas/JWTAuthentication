@@ -21,14 +21,19 @@ namespace JWTAuthentication.Helper
                     };
 
             var token = new JwtSecurityToken(
-                tokenInfo.Issuer,
-                null,
-                claims,
-                null,
+                issuer: tokenInfo.Issuer,
+                audience: tokenInfo.Audience,
+                claims: claims,
                 expires: DateTime.Now.AddMinutes(120),
                 signingCredentials: credentials);
 
             return new JwtSecurityTokenHandler().WriteToken(token); ;
+        }
+
+        internal static bool ValidateAudience(IEnumerable<string> audiences, SecurityToken securityToken, 
+            TokenValidationParameters validationParameters)
+        {
+            return true;
         }
     }
 }

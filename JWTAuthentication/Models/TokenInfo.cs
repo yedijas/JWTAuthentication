@@ -12,11 +12,14 @@ namespace JWTAuthentication.Models
         public string UnHashedSecretKey { get; set; } = "";
         public string Issuer { get; set; }
 
-        public TokenInfo(string _issuer, string _subject, string _plainKey = "")
+        public string Audience { get; set; }
+
+        public TokenInfo(string _issuer, string _subject, string _audience, string _plainKey = "")
         {
             Subject = _subject;
             Issuer = _issuer;
             UnHashedSecretKey = _plainKey;
+            Audience = _audience;
             HashTheKey();
         }
 
@@ -40,6 +43,18 @@ namespace JWTAuthentication.Models
         public void HashTheKey()
         {
             SetKeyHashed(UnHashedSecretKey);
+        }
+
+        public static string HashThisString(string toHash)
+        {
+            var crypt = SHA256.Create();
+            var hash = new StringBuilder();
+            byte[] crypto = crypt.ComputeHash(Encoding.UTF8.GetBytes(toHash));
+            foreach (byte theByte in crypto)
+            {
+                hash.Append(theByte.ToString("x2"));
+            }
+            return hash.ToString();
         }
     }
 }
