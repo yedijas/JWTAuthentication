@@ -19,3 +19,5 @@ Authentication API -->> Other API: yes, it is valid.
 Other API -->> UI: here is something for you to show since your token is good and we are friends.
 UI -->> User: here is the stuff you requested, man
 ```
+
+So in order to properly use this, you need to fill in the audience list in the database. I add a controller for testing purpose. You may also need to prefill the user tables. Then you may test the token.
