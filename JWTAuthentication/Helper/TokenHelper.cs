@@ -1,5 +1,8 @@
 ﻿using JWTAuthentication.Databases.Audiences;
+using JWTAuthentication.Databases.Users;
 using JWTAuthentication.Models;
+using JWTAuthentication.Options;
+using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
@@ -10,10 +13,14 @@ namespace JWTAuthentication.Helper
     public class TokenHelper : ITokenHelper
     {
         private IAudienceService _audienceService;
-        
-        public TokenHelper(IAudienceService audienceService)
+        private IOptions<JWTOptions> _options;
+        private readonly IUserService _userService;
+
+        public TokenHelper(IOptions<JWTOptions> options, IAudienceService audienceService, IUserService userService)
         {
+            _options = options;
             _audienceService = audienceService;
+            _userService = userService;
         }
 
         public string GenerateJSONWebToken(TokenInfo tokenInfo, User singleUser)
@@ -38,11 +45,11 @@ namespace JWTAuthentication.Helper
             return new JwtSecurityTokenHandler().WriteToken(token); ;
         }
 
-        public bool ValidateAudience(IEnumerable<string> audiences, SecurityToken securityToken, 
+        public bool ValidateAudience(IEnumerable<string> audiences, SecurityToken securityToken,
             TokenValidationParameters validationParameters)
         {
             bool retval = false;
-            foreach(string singleAudience in audiences)
+            foreach (string singleAudience in audiences)
             {
                 retval = _audienceService.CheckHostExists(singleAudience);
                 if (retval)
@@ -50,6 +57,51 @@ namespace JWTAuthentication.Helper
             }
 
             return retval;
+        }
+
+        public bool ValidateToken(string tokenString)
+        {
+            bool result = false;
+
+            var jwtHandler = new JwtSecurityTokenHandler();
+            var signinigkey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(TokenInfo.HashThisString(_options.Value.SecretKey)));
+            var validationParam = new TokenValidationParameters()
+            {
+                ValidateIssuer = true,
+                ValidateAudience = true,
+                ValidIssuer = _options.Value.Issuer,
+                IssuerSigningKey = signinigkey,
+                AudienceValidator = ValidateAudience
+            };
+
+            jwtHandler.ValidateToken(tokenString, validationParam, out SecurityToken validatedToken);
+            if (validatedToken is not null && validatedToken is JwtSecurityToken jwtsectoken)
+            {
+                bool isValidAlgorithm = jwtsectoken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase);
+                bool isValidUserClaim = ValidateUserNameInClaim(jwtsectoken);
+            }
+            else
+            {
+                return false;
+            }
+            return result;
+        }
+
+        public bool ValidateUserNameInClaim(JwtSecurityToken tokenToValidate)
+        {
+            bool result = false;
+            string username = tokenToValidate.Claims.FirstOrDefault(o => o.Type == "UserName").Value;
+            string useremail = tokenToValidate.Claims.FirstOrDefault(o => o.Type == "UserEmail").Value;
+            var user = _userService.GetByUsername(username);
+            if (user is not null)
+                result = true;
+            else
+                result = false;
+            if (user.UserEmail.Equals(useremail))
+                result = true;
+            else
+                result = false;
+            return result;
         }
     }
 }

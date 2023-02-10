@@ -1,15 +1,13 @@
 using JWTAuthentication.Databases;
 using JWTAuthentication.Databases.Audiences;
-using JWTAuthentication.Databases.Employees;
 using JWTAuthentication.Databases.Users;
 using JWTAuthentication.Helper;
 using JWTAuthentication.Models;
 using JWTAuthentication.Options;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.Extensions.Options;
-using Microsoft.Extensions.Configuration;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using JWTAuthentication.Databases.Tokens;
 
 internal class Program
 {
@@ -23,9 +21,9 @@ internal class Program
         builder.Services.Configure<LiteDBOptions>(builder.Configuration.GetSection(LiteDBOptions.LiteDB));
         builder.Services.Configure<JWTOptions>(builder.Configuration.GetSection(JWTOptions.JWT));
         builder.Services.AddSingleton<ILiteDbContext, DatabaseContext>();
-        builder.Services.AddTransient<IEmployeeService, EmployeeService>();
         builder.Services.AddTransient<IUserService, UserService>();
         builder.Services.AddTransient<IAudienceService, AudienceService>();
+        builder.Services.AddTransient<ITokenService, TokenService>();
         builder.Services.AddTransient<ITokenHelper, TokenHelper>();
 
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>

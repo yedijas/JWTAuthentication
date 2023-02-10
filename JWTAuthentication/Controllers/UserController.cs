@@ -1,4 +1,5 @@
-﻿using JWTAuthentication.Databases.Users;
+﻿using JWTAuthentication.Databases.Tokens;
+using JWTAuthentication.Databases.Users;
 using JWTAuthentication.Helper;
 using JWTAuthentication.Models;
 using JWTAuthentication.Options;
@@ -25,14 +26,16 @@ namespace JWTAuthentication.Controllers
         private readonly IOptions<JWTOptions> _options;
         private readonly IUserService _userService;
         private readonly ITokenHelper _tokenHelper;
+        private readonly ITokenService _tokenService;
 
         public UserController(ILogger<UserController> logger, IOptions<JWTOptions> options, IUserService userService
-            ,ITokenHelper tokenHelper)
+            , ITokenService tokenService, ITokenHelper tokenHelper)
         {
             _logger = logger;
             _options = options;
             _userService = userService;
             _tokenHelper = tokenHelper;
+            _tokenService = tokenService;
         }
 
         [HttpGet]
@@ -107,16 +110,35 @@ namespace JWTAuthentication.Controllers
         public ActionResult Login(string userName, string password)
         {
             var singleUser = _userService.GetByUsername(userName);
-            StringValues requesterHostName = "";
-            Request.Headers.TryGetValue("Host", out requesterHostName);
-            var tokenInfo = new TokenInfo(_options.Value.Issuer, _options.Value.Subject, requesterHostName, _options.Value.TokenLife, _options.Value.SecretKey);
+            StringValues requestorHostName = "";
+            Request.Headers.TryGetValue("Host", out requestorHostName);
+            var tokenInfo = new TokenInfo(_options.Value.Issuer, _options.Value.Subject, requestorHostName, _options.Value.TokenLife, _options.Value.SecretKey);
             if (singleUser != null && singleUser.UserPassword.Equals(password))
             {
-                return Ok(_tokenHelper.GenerateJSONWebToken(tokenInfo,singleUser)); // return token here
+                string resultedToken = _tokenHelper.GenerateJSONWebToken(tokenInfo, singleUser);
+                _tokenService.Insert(new Token { 
+                    ActualToken= resultedToken,
+                    CreatedDate = DateTime.Now,
+                    IssuedFor = singleUser.UserName,
+                    RequestorURL = requestorHostName,
+                    IsValid = true
+                });
+                return Ok(resultedToken); // return token here
             }
             else
                 return BadRequest();
+        }
 
+        [HttpPost("{userName}")]
+        public ActionResult LogOut(string userName)
+        {
+            if (_tokenService.DeleteByUsername(userName) != default) // delete the preexisting token
+            {
+                // should update to other sites to delete their token storage too.
+                return Ok();
+            }
+            else
+                return BadRequest();
         }
     }
 }
