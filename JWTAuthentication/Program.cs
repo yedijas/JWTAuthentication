@@ -8,15 +8,15 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using JWTAuthentication.Databases.Tokens;
+using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.Extensions.Options;
 
 internal class Program
 {
     private static void Main(string[] args)
     {
         var builder = WebApplication.CreateBuilder(args);
-
         // Add services to the container.
-
         builder.Services.AddControllers();
         builder.Services.Configure<LiteDBOptions>(builder.Configuration.GetSection(LiteDBOptions.LiteDB));
         builder.Services.Configure<JWTOptions>(builder.Configuration.GetSection(JWTOptions.JWT));
@@ -25,7 +25,6 @@ internal class Program
         builder.Services.AddTransient<IAudienceService, AudienceService>();
         builder.Services.AddTransient<ITokenService, TokenService>();
         builder.Services.AddTransient<ITokenHelper, TokenHelper>();
-
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
         {
             options.RequireHttpsMetadata = false;
@@ -34,25 +33,55 @@ internal class Program
             options.TokenValidationParameters = new TokenValidationParameters()
             {
                 ValidateIssuer = true,
-                ValidateAudience = true, 
+                ValidateAudience = true,
                 ValidIssuer = builder.Configuration["Jwt:Issuer"],
                 IssuerSigningKey = signinigkey,
                 AudienceValidator = ValidateAudience
             };
         });
-
         // Configure the HTTP request pipeline.
         var app = builder.Build();
-
         app.UseHttpsRedirection();
-
         app.UseAuthentication();
-
         app.UseAuthorization();
-
         app.MapControllers();
-
         app.Run();
+        // comment line below if you dont want to use this on test mode
+        InitiateTestData();
+    }
+
+    private static void InitiateTestData()
+    {
+        var config = new ConfigurationBuilder()
+            .SetBasePath(Directory.GetCurrentDirectory())
+            .AddJsonFile("appsettings.json").Build();
+        // will only do shit if the database is not exists yet
+        if (!Directory.Exists(config.GetValue<string>("LiteDB:DatabaseDirectory")) && 
+            !File.Exists(config.GetValue<string>("LiteDB:DatabaseLocation"))) 
+        {
+            using (var dbc = new DatabaseContext(config.GetValue<string>("LiteDB:DatabaseLocation")))
+            {
+                using (var userService = new UserService(dbc))
+                {
+                    userService.Insert(new User()
+                    {
+                        UserName = "test",
+                        UserPassword = "password",
+                        UserEmail = "a.b@c.com",
+                        CreatedAt = DateTime.Now
+                    });
+                }
+                using (var audienceService = new AudienceService(dbc))
+                {
+                    audienceService.Insert(new TokenAudience()
+                    {
+                        AudienceID = 1,
+                        Hostname = "localhost",
+                        SystemName = "test"
+                    });
+                }
+            }
+        }
     }
 
     /// <summary>
@@ -74,15 +103,16 @@ internal class Program
         string dbloc = config.GetValue<string>("LiteDB:DatabaseLocation");
         using (var dbc = new DatabaseContext(dbloc)) // part where I init the database context.
         {
-            var audienceService = new AudienceService(dbc);
-            foreach (string singleAudience in audiences)
+            using (var audienceService = new AudienceService(dbc))
             {
-                retval = audienceService.CheckHostExists(singleAudience);
-                if (retval)
-                    break;
+                foreach (string singleAudience in audiences)
+                {
+                    retval = audienceService.CheckHostExists(singleAudience);
+                    if (retval)
+                        break;
+                }
             }
         }
-
         return retval;
     }
 }

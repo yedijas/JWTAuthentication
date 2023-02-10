@@ -4,9 +4,10 @@ using Microsoft.IdentityModel.Tokens;
 
 namespace JWTAuthentication.Databases.Users
 {
-    public class UserService : IUserService
+    public class UserService : IUserService, IDisposable
     {
         private LiteDatabase _myLiteDB;
+        private bool disposedValue;
 
         public UserService(ILiteDbContext liteDbContext)
         {
@@ -76,6 +77,25 @@ namespace JWTAuthentication.Databases.Users
         {
             return _myLiteDB.GetCollection<User>
                 ("User").Update(singleUser);
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    _myLiteDB = null;
+                    GC.Collect();
+                }
+                disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }

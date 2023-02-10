@@ -39,8 +39,13 @@ namespace JWTAuthentication.Controllers
             _audienceService = audienceService;
         }
 
+        /// <summary>
+        /// This method will be called by other API to check whether the token given to them are valid or not.
+        /// </summary>
+        /// <param name="tokenString">Token string given from UI to other API</param>
+        /// <returns>Http200 if token is valid, bad request if token is invalid.</returns>
         [HttpGet("{tokenString}")]
-        public ActionResult<Token> Validate(string tokenString)
+        public ActionResult Validate(string tokenString)
         {
             bool isValid = false;
             var singleToken = _tokenService.GetByToken(tokenString);

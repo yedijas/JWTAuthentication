@@ -11,6 +11,7 @@ namespace JWTAuthentication.Databases
     public class DatabaseContext : ILiteDbContext, IDisposable
     {
         public LiteDatabase Database { get; }
+        private bool disposedValue;
 
         public DatabaseContext(IOptions<LiteDBOptions> options)
         {
@@ -31,16 +32,20 @@ namespace JWTAuthentication.Databases
 
         public void Dispose()
         {
-            Dispose(true);
-
+            Dispose(disposing: true);
             GC.SuppressFinalize(this);
         }
 
         protected virtual void Dispose(bool disposing)
         {
-            if (disposing)
+            if (!disposedValue)
             {
-                Database.Dispose();
+                if (disposing)
+                {
+                    Database.Dispose();
+                    GC.Collect();
+                }
+                disposedValue = true;
             }
         }
     }

@@ -3,9 +3,10 @@ using LiteDB;
 
 namespace JWTAuthentication.Databases.Audiences
 {
-    public class AudienceService : IAudienceService
+    public class AudienceService : IAudienceService, IDisposable
     {
         private LiteDatabase _myLiteDB;
+        private bool disposedValue;
 
         public AudienceService(ILiteDbContext liteDbContext)
         {
@@ -90,6 +91,25 @@ namespace JWTAuthentication.Databases.Audiences
         {
             return _myLiteDB.GetCollection<TokenAudience>
                 ("TokenAudience").Exists(o => o.Hostname.Equals(hostName));
+        }
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!disposedValue)
+            {
+                if (disposing)
+                {
+                    _myLiteDB = null;
+                    GC.Collect();
+                }
+                disposedValue = true;
+            }
+        }
+
+        public void Dispose()
+        {
+            Dispose(disposing: true);
+            GC.SuppressFinalize(this);
         }
     }
 }
