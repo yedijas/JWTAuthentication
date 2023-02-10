@@ -59,9 +59,9 @@ namespace JWTAuthentication.Helper
             return retval;
         }
 
-        public bool ValidateToken(string tokenString)
+        public JwtSecurityToken GetTokenFromString(string tokenString)
         {
-            bool result = false;
+            JwtSecurityToken token = null;
 
             var jwtHandler = new JwtSecurityTokenHandler();
             var signinigkey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(TokenInfo.HashThisString(_options.Value.SecretKey)));
@@ -75,10 +75,35 @@ namespace JWTAuthentication.Helper
             };
 
             jwtHandler.ValidateToken(tokenString, validationParam, out SecurityToken validatedToken);
-            if (validatedToken is not null && validatedToken is JwtSecurityToken jwtsectoken)
+            token = (JwtSecurityToken)validatedToken;
+
+            return token;
+        }
+
+        public bool ValidateToken(string tokenString)
+        {
+            bool result = false;
+            
+            JwtSecurityToken jwtsectoken = GetTokenFromString(tokenString);
+            if (jwtsectoken is not null)
             {
                 bool isValidAlgorithm = jwtsectoken.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase);
                 bool isValidUserClaim = ValidateUserNameInClaim(jwtsectoken);
+            }
+            else
+            {
+                return false;
+            }
+            return result;
+        }
+
+        public bool ValidateToken(JwtSecurityToken token)
+        {
+            bool result = false;
+            if (token is not null)
+            {
+                bool isValidAlgorithm = token.Header.Alg.Equals(SecurityAlgorithms.HmacSha256, StringComparison.InvariantCultureIgnoreCase);
+                bool isValidUserClaim = ValidateUserNameInClaim(token);
             }
             else
             {

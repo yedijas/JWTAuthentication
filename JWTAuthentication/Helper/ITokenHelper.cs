@@ -10,6 +10,8 @@ namespace JWTAuthentication.Helper
         public bool ValidateAudience(IEnumerable<string> audiences, SecurityToken securityToken,
            TokenValidationParameters validationParameters);
         public bool ValidateToken(string tokenString);
+        public bool ValidateToken(JwtSecurityToken token);
         public bool ValidateUserNameInClaim(JwtSecurityToken tokenToValidate);
+        public JwtSecurityToken GetTokenFromString(string tokenString);
     }
 }

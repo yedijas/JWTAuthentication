@@ -24,18 +24,21 @@ namespace JWTAuthentication.Controllers
     public class TokenController : ControllerBase
     {
         private readonly ILogger<UserController> _logger;
+        private readonly IOptions<JWTOptions> _options;
         private readonly ITokenHelper _tokenHelper;
         private readonly ITokenService _tokenService;
-        private readonly IOptions<JWTOptions> _options;
         private readonly IAudienceService _audienceService;
+        private readonly IUserService _userService;
 
         public TokenController(ILogger<UserController> logger, IOptions<JWTOptions> options,
-            ITokenService tokenService, ITokenHelper tokenHelper, IAudienceService audienceService)
+            ITokenService tokenService, ITokenHelper tokenHelper, IAudienceService audienceService,
+            IUserService userService)
         {
             _logger = logger;
             _tokenHelper = tokenHelper;
             _tokenService = tokenService;
             _options = options;
+            _userService = userService;
             _audienceService = audienceService;
         }
 
@@ -45,7 +48,7 @@ namespace JWTAuthentication.Controllers
         /// <param name="tokenString">Token string given from UI to other API</param>
         /// <returns>Http200 if token is valid, bad request if token is invalid.</returns>
         [HttpGet("{tokenString}")]
-        public ActionResult Validate(string tokenString)
+        public ActionResult ValidateToken(string tokenString)
         {
             bool isValid = false;
             var singleToken = _tokenService.GetByToken(tokenString);
@@ -56,6 +59,38 @@ namespace JWTAuthentication.Controllers
                 Request.Headers.TryGetValue("Host", out requestorHostName);
                 singleToken.UsedByURL += (@"|" + requestorHostName);
                 return Ok();
+            }
+            else
+                return BadRequest();
+        }
+
+        [HttpPost("{tokenString}")]
+        public ActionResult RefreshToken(string tokenString)
+        {
+            var token = _tokenHelper.GetTokenFromString(tokenString);
+
+            if (_tokenHelper.ValidateToken(token))
+            {
+                var singleUser = _userService.GetByUsername(token.Claims.FirstOrDefault(o => o.Type == "UserName").Value);
+
+                StringValues requestorHostName = "";
+                Request.Headers.TryGetValue("Host", out requestorHostName);
+                var tokenInfo = new TokenInfo(_options.Value.Issuer, _options.Value.Subject, requestorHostName, _options.Value.TokenLife, _options.Value.SecretKey);
+                if (singleUser != null)
+                {
+                    string resultedToken = _tokenHelper.GenerateJSONWebToken(tokenInfo, singleUser);
+                    _tokenService.Insert(new Token
+                    {
+                        ActualToken = resultedToken,
+                        CreatedDate = DateTime.Now,
+                        IssuedFor = singleUser.UserName,
+                        RequestorURL = requestorHostName,
+                        IsValid = true
+                    });
+                    return Ok(resultedToken); // return token here
+                }
+                else
+                    return BadRequest();
             }
             else
                 return BadRequest();
