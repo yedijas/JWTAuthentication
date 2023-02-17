@@ -1,7 +1,12 @@
-﻿namespace JWTAuthentication.Models
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
+
+namespace JWTAuthentication.Models
 {
     public class Token
     {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int Id { get; set; }
         public string ActualToken { get; set; }
         public DateTime CreatedDate { get; set; }

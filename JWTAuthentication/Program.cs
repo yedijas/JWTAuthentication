@@ -10,6 +10,8 @@ using System.Text;
 using JWTAuthentication.Databases.Tokens;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.Options;
+using Microsoft.AspNetCore.Authentication.Certificate;
+using JWTAuthentication.Databases.Certificates;
 
 internal class Program
 {
@@ -20,11 +22,14 @@ internal class Program
         builder.Services.AddControllers();
         builder.Services.Configure<LiteDBOptions>(builder.Configuration.GetSection(LiteDBOptions.LiteDB));
         builder.Services.Configure<JWTOptions>(builder.Configuration.GetSection(JWTOptions.JWT));
+        builder.Services.Configure<CertificateOptions>(builder.Configuration.GetSection(CertificateOptions.CERTS));
         builder.Services.AddSingleton<ILiteDbContext, DatabaseContext>();
+        builder.Services.AddSingleton<ITokenService, TokenService>();
         builder.Services.AddTransient<IUserService, UserService>();
+        builder.Services.AddSingleton<ICertificateService, CertificateService>();
         builder.Services.AddTransient<IAudienceService, AudienceService>();
-        builder.Services.AddTransient<ITokenService, TokenService>();
-        builder.Services.AddTransient<ITokenHelper, TokenHelper>();
+        builder.Services.AddSingleton<ITokenHelper, TokenHelper>();
+        builder.Services.AddSingleton<ICertificateHelper, CertificateHelper>();
         builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme).AddJwtBearer(options =>
         {
             options.RequireHttpsMetadata = false;
@@ -39,6 +44,30 @@ internal class Program
                 AudienceValidator = ValidateAudience
             };
         });
+        builder.Services.AddAuthentication(CertificateAuthenticationDefaults.AuthenticationScheme).AddCertificate(options => {
+            options.AllowedCertificateTypes = CertificateTypes.All; // change as needed
+            options.Events = new CertificateAuthenticationEvents
+            {
+                OnCertificateValidated = context => {
+                    
+                    var validationService = context.HttpContext.RequestServices.GetService<ICertificateHelper>();
+                    if (validationService.ValidateCertificate(context.ClientCertificate, context.HttpContext.Request.Headers.Host))
+                    {
+                        context.Success();
+                    }
+                    else
+                    {
+                        context.Fail("Invalid certificate");
+                    }
+                    return Task.CompletedTask;
+                },
+                OnAuthenticationFailed = context => {
+                    context.Fail("Invalid certificate");
+                    return Task.CompletedTask;
+                }
+            };
+        });
+
         // Configure the HTTP request pipeline.
         var app = builder.Build();
         app.UseHttpsRedirection();

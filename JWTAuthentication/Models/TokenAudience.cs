@@ -1,7 +1,12 @@
-﻿namespace JWTAuthentication.Models
+﻿using System.ComponentModel.DataAnnotations.Schema;
+using System.ComponentModel.DataAnnotations;
+
+namespace JWTAuthentication.Models
 {
     public class TokenAudience
     {
+        [Key]
+        [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
         public int AudienceID { get; set; }
         public string Hostname { get; set; }
         public string SystemName { get; set; }
